@@ -1,0 +1,38 @@
+import telegram
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import requests
+
+# Define API token and create bot object
+TOKEN = 'your_bot_token_here'
+bot = telegram.Bot(token=TOKEN)
+
+# Define the start command handler
+def start(update, context):
+    message = "Welcome to the book search bot! Type in the title or author of a book you're looking for."
+    update.message.reply_text(message)
+
+# Define the book search handler
+def search_book(update, context):
+    query = update.message.text
+    # Send a request to the Google Books API with the user's query
+    response = requests.get('https://www.googleapis.com/books/v1/volumes?q=' + query)
+    data = response.json()
+    # Extract the book information from the API response and send it back to the user
+    for book in data['items']:
+        title = book['volumeInfo']['title']
+        author = book['volumeInfo']['authors'][0] if 'authors' in book['volumeInfo'] else 'Unknown author'
+        message = f'Title: {title}\nAuthor: {author}\n\n'
+        update.message.reply_text(message)
+
+# Define the error handler
+def error(update, context):
+    print(f"Update {update} caused error {context.error}")
+
+# Set up the bot's handlers and start the bot
+updater = Updater(TOKEN, use_context=True)
+dispatcher = updater.dispatcher
+dispatcher.add_handler(CommandHandler('start', start))
+dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, search_book))
+dispatcher.add_error_handler(error)
+updater.start_polling()
+updater.idle()
